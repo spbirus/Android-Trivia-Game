@@ -297,23 +297,15 @@ public class PlayActivity extends AppCompatActivity {
 
                 //create timestamp to send with the final percent
                 Timestamp stamp = new Timestamp(System.currentTimeMillis());
-
-                //open file to store the scores
-//                try {
-//                    output = new PrintStream(openFileOutput("finalscores.txt", MODE_APPEND));
-//                } catch (FileNotFoundException e) {
-//                    e.printStackTrace();
-//                    Log.v("Add word activity", "new file not found");
-//                }
-
+                
 
                 String line = stamp + ", " + finalPercent;
                 Log.v("addwordactivity", ""+line);
-                //output.println(line);
-                //output.close();
+
 
                 DatabaseReference database = FirebaseDatabase.getInstance().getReference();
-                
+                FirebaseDatabase.getInstance().setPersistenceEnabled(true);
+
                 database.child("Players").child(playerName).child("Name").setValue(playerName);
                 database.child("Players").child(playerName).child("Score").setValue(finalPercent);
                 database.child("Players").child(playerName).child("TimeStamp").setValue(stamp);
@@ -351,11 +343,5 @@ public class PlayActivity extends AppCompatActivity {
         bar.incrementProgressBy(20);
     }
 
-    private void checkScores(String line){
-        String[] lineArr = line.split(",");
-        int score = Integer.parseInt(lineArr[1].trim());
-
-
-    }
 
 }

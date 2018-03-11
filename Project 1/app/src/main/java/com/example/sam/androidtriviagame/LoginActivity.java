@@ -69,6 +69,7 @@ public class LoginActivity extends AppCompatActivity
         // request the user's ID, email address, and basic profile
         GoogleSignInOptions options = new GoogleSignInOptions.Builder(
                 GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
 
@@ -80,7 +81,6 @@ public class LoginActivity extends AppCompatActivity
                 .build();
 
 
-        //mAuth = FirebaseAuth.getInstance();
 
     }
 
@@ -130,13 +130,27 @@ public class LoginActivity extends AppCompatActivity
                 // yay; user logged in successfully
                 GoogleSignInAccount acct = result.getSignInAccount();
                 Log.v("login", "success " + acct.getDisplayName() + " " +acct.getEmail());
+
+                mAuth = FirebaseAuth.getInstance();
+                AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
+                mAuth.signInWithCredential(credential).addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (!task.isSuccessful()) {
+                            Log.d("tag", "signInWithCredential", task.getException());
+                            Toast.makeText(LoginActivity.this, "Authentication failed.",
+                                    Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(LoginActivity.this, "Authentication Sucessful.",Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+
                 Intent startIntent = new Intent(this, StartActivity.class );
                 startIntent.putExtra("name",acct.getDisplayName());
                 startActivityForResult(startIntent, 1);
-                //$TV(R.id.results).setText("You signed in as: " + acct.getDisplayName() + " " + acct.getEmail());
             } else {
                 Log.v("login", "failure");
-                //$TV(R.id.results).setText("Login fail. :(");
             }
         }
     }

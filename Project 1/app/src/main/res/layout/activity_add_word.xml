@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.sam.androidtriviagame.AddWordActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/addATerm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/add_word"
+            android:textAlignment="center" />
+
+        <EditText
+            android:id="@+id/termText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="textPersonName"
+            android:text="@string/term_text" />
+
+        <EditText
+            android:id="@+id/defText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="textPersonName"
+            android:text="@string/def_text" />
+
+        <Button
+            android:id="@+id/addTermOkayButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="@android:string/yes"
+            android:onClick="addTerm"/>
+    </LinearLayout>
+
+</android.support.constraint.ConstraintLayout>

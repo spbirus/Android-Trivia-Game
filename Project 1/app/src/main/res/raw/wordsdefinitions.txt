@@ -1,0 +1,7 @@
+Button, a clickabel widget with a text label
+TextView, displays non-editable text
+ScrollView, a container with scrollbars around another widget or container
+EditText, an editable text input box
+ImageView, displays an image without being clickable
+ImageButton, a clickable widget with an image label
+CheckBox, an individual toggleable boolean on/off check box

@@ -131,6 +131,7 @@ public class LoginActivity extends AppCompatActivity
                 GoogleSignInAccount acct = result.getSignInAccount();
                 Log.v("login", "success " + acct.getDisplayName() + " " +acct.getEmail());
                 Intent startIntent = new Intent(this, StartActivity.class );
+                startIntent.putExtra("name",acct.getDisplayName());
                 startActivityForResult(startIntent, 1);
                 //$TV(R.id.results).setText("You signed in as: " + acct.getDisplayName() + " " + acct.getEmail());
             } else {

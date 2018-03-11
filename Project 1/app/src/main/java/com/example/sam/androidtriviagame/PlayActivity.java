@@ -11,6 +11,12 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.sql.Timestamp;
@@ -52,7 +58,7 @@ public class PlayActivity extends AppCompatActivity {
     private TextToSpeech tts;
     private boolean isTTSinitialized;
 
-
+    String playerName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +66,7 @@ public class PlayActivity extends AppCompatActivity {
         setContentView(R.layout.activity_play);
 
         switchData = getIntent().getIntExtra("switch",0);
+        playerName = getIntent().getStringExtra("name");
         Log.v("switchData", ""+switchData);
 
         Intent callingIntent = getIntent();
@@ -292,18 +299,24 @@ public class PlayActivity extends AppCompatActivity {
                 Timestamp stamp = new Timestamp(System.currentTimeMillis());
 
                 //open file to store the scores
-                try {
-                    output = new PrintStream(openFileOutput("finalscores.txt", MODE_APPEND));
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                    Log.v("Add word activity", "new file not found");
-                }
+//                try {
+//                    output = new PrintStream(openFileOutput("finalscores.txt", MODE_APPEND));
+//                } catch (FileNotFoundException e) {
+//                    e.printStackTrace();
+//                    Log.v("Add word activity", "new file not found");
+//                }
+
 
                 String line = stamp + ", " + finalPercent;
                 Log.v("addwordactivity", ""+line);
-                output.println(line);
-                output.close();
+                //output.println(line);
+                //output.close();
 
+                DatabaseReference database = FirebaseDatabase.getInstance().getReference();
+                
+                database.child("Players").child(playerName).child("Name").setValue(playerName);
+                database.child("Players").child(playerName).child("Score").setValue(finalPercent);
+                database.child("Players").child(playerName).child("TimeStamp").setValue(stamp);
                 //go back to the menu
                 finish();
             }
@@ -336,6 +349,13 @@ public class PlayActivity extends AppCompatActivity {
         }
         //update the progress bar to show how many questions left
         bar.incrementProgressBy(20);
+    }
+
+    private void checkScores(String line){
+        String[] lineArr = line.split(",");
+        int score = Integer.parseInt(lineArr[1].trim());
+
+
     }
 
 }

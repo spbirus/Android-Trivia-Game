@@ -25,6 +25,7 @@ public class StartActivity extends AppCompatActivity {
     String word;
     String defn;
     AddWordFragment fragment;
+    String playerName;
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -44,6 +45,7 @@ public class StartActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
 
+        playerName = getIntent().getStringExtra("name"); //grab the name
         //mPlayer = MediaPlayer.create(this, R.raw.popculture);
         mySwitch = findViewById(R.id.musicSwitch);
     }
@@ -54,19 +56,18 @@ public class StartActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent intentdata) {
         Log.v("StartActivity", "onActivityResult");
         super.onActivityResult(requestCode, resultCode, intentdata);
-        fragment.dismiss();
-        if (requestCode == 1 && resultCode == RESULT_OK){
+
+        if (requestCode == 123456789 && resultCode == RESULT_OK){
+            fragment.dismiss();
             Log.v("onactivityresult", "extract returned inupts");
             // extract returned parameters from the intent
             word = intentdata.getStringExtra("word");
             defn = intentdata.getStringExtra("definition");
-            Log.v("word", ""+word);
-            Log.v("defn", ""+defn);
-            // Write a message to the database
-            FirebaseDatabase database = FirebaseDatabase.getInstance();
-            DatabaseReference myRef = database.getReference(word);
 
-            myRef.setValue(defn);
+            // Write a message to the database
+            DatabaseReference database = FirebaseDatabase.getInstance().getReference();;
+
+            database.child("WordsAndDefs").child(word).setValue(defn);
             //ADD THE WORD TO THE DATABASE
         }
     }
@@ -94,6 +95,7 @@ public class StartActivity extends AppCompatActivity {
         }else{
             playIntent.putExtra("switch", 0);
         }
+        playIntent.putExtra("name",playerName);
         startActivityForResult(playIntent, 1);
     }
 

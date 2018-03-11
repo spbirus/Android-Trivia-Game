@@ -30,7 +30,7 @@ public class AddWordFragment extends DialogFragment {
                 Intent intent = new Intent();
                 intent.putExtra("word", word);
                 intent.putExtra("definition", defn);
-                activity.onActivityResult(1,
+                activity.onActivityResult(123456789,
                         Activity.RESULT_OK, intent);
 
             }

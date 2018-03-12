@@ -148,6 +148,7 @@ public class LoginActivity extends AppCompatActivity
 
                 Intent startIntent = new Intent(this, StartActivity.class );
                 startIntent.putExtra("name",acct.getDisplayName());
+                startIntent.putExtra("id",acct.getId());
                 startActivityForResult(startIntent, 1);
             } else {
                 Log.v("login", "failure");

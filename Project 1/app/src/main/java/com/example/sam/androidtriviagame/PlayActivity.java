@@ -59,6 +59,7 @@ public class PlayActivity extends AppCompatActivity {
     private boolean isTTSinitialized;
 
     String playerName;
+    int playerID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +68,7 @@ public class PlayActivity extends AppCompatActivity {
 
         switchData = getIntent().getIntExtra("switch",0);
         playerName = getIntent().getStringExtra("name");
+        playerID = getIntent().getIntExtra("id",1);
         Log.v("switchData", ""+switchData);
 
         Intent callingIntent = getIntent();
@@ -98,6 +100,8 @@ public class PlayActivity extends AppCompatActivity {
         //set initial score to 0
         finalScore = 0;
 
+
+        //-----------------------------------------------------------------------------------------
         //use scanner to open text file
         scanOriginal = new Scanner(getResources().openRawResource(R.raw.wordsdefinitions));
         //add original to the array
@@ -122,16 +126,7 @@ public class PlayActivity extends AppCompatActivity {
         } catch (FileNotFoundException e) {
             Log.v("Play activity", "new file not found");
         }
-
-
-
-        //GET RID OF THIS EVENTUALLY
-        //check that they are added
-        for(String s: storedWords){
-            Log.v("play activity", "" + s);
-        }
-
-
+        //-----------------------------------------------------------------------------------------
 
         getWord();
     }
@@ -304,11 +299,16 @@ public class PlayActivity extends AppCompatActivity {
 
 
                 DatabaseReference database = FirebaseDatabase.getInstance().getReference();
-                FirebaseDatabase.getInstance().setPersistenceEnabled(true);
+                //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
 
-                database.child("Players").child(playerName).child("Name").setValue(playerName);
-                database.child("Players").child(playerName).child("Score").setValue(finalPercent);
-                database.child("Players").child(playerName).child("TimeStamp").setValue(stamp);
+
+                String id = Integer.toString(playerID);
+                Log.v("Player id", id);
+                database.child("Players").child(id).child("Name").setValue(playerName);
+                //need to check if there is a new high score
+                String scoreKey = database.child("Players").child(id).child("Scores").push().getKey();
+                database.child("Players").child(id).child("Scores").child(scoreKey).child("Score").setValue(finalPercent);
+                database.child("Players").child(id).child("Scores").child(scoreKey).child("TimeStamp").setValue(stamp);
                 //go back to the menu
                 finish();
             }

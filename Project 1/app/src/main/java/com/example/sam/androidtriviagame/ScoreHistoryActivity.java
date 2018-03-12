@@ -28,6 +28,10 @@ public class ScoreHistoryActivity extends AppCompatActivity {
 
         ArrayList scoreArray = new ArrayList(100);
 
+
+
+
+
         try {
             scanNew = new Scanner(openFileInput("finalscores.txt"));
             //add new to the array

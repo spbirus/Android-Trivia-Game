@@ -26,6 +26,7 @@ public class StartActivity extends AppCompatActivity {
     String defn;
     AddWordFragment fragment;
     String playerName;
+    int playerID;
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -46,6 +47,7 @@ public class StartActivity extends AppCompatActivity {
         setContentView(R.layout.activity_start);
 
         playerName = getIntent().getStringExtra("name"); //grab the name
+        playerID = getIntent().getIntExtra("id",1);
         //mPlayer = MediaPlayer.create(this, R.raw.popculture);
         mySwitch = findViewById(R.id.musicSwitch);
     }
@@ -57,6 +59,7 @@ public class StartActivity extends AppCompatActivity {
         Log.v("StartActivity", "onActivityResult");
         super.onActivityResult(requestCode, resultCode, intentdata);
 
+        //callback from when dialog box is done entering data
         if (requestCode == 123456789 && resultCode == RESULT_OK){
             fragment.dismiss();
             Log.v("onactivityresult", "extract returned inupts");
@@ -65,9 +68,13 @@ public class StartActivity extends AppCompatActivity {
             defn = intentdata.getStringExtra("definition");
 
             // Write a message to the database
-            DatabaseReference database = FirebaseDatabase.getInstance().getReference();;
+            DatabaseReference database = FirebaseDatabase.getInstance().getReference();
 
-            database.child("WordsAndDefs").child(word).setValue(defn);
+
+
+            String key = database.child("WordsAndDefs").push().getKey();
+            database.child("WordsAndDefs").child(key).child("word").setValue(word); //need to grab a random integer as the ID
+            database.child("WordsAndDefs").child(key).child("defn").setValue(defn);
             //ADD THE WORD TO THE DATABASE
         }
     }
@@ -96,6 +103,7 @@ public class StartActivity extends AppCompatActivity {
             playIntent.putExtra("switch", 0);
         }
         playIntent.putExtra("name",playerName);
+        playIntent.putExtra("id",playerID);
         startActivityForResult(playIntent, 1);
     }
 

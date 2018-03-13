@@ -26,7 +26,7 @@ public class StartActivity extends AppCompatActivity {
     String defn;
     AddWordFragment fragment;
     String playerName;
-    int playerID;
+    String playerID;
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -47,7 +47,7 @@ public class StartActivity extends AppCompatActivity {
         setContentView(R.layout.activity_start);
 
         playerName = getIntent().getStringExtra("name"); //grab the name
-        playerID = getIntent().getIntExtra("id",1);
+        playerID = getIntent().getStringExtra("id");
         //mPlayer = MediaPlayer.create(this, R.raw.popculture);
         mySwitch = findViewById(R.id.musicSwitch);
     }
@@ -69,8 +69,6 @@ public class StartActivity extends AppCompatActivity {
 
             // Write a message to the database
             DatabaseReference database = FirebaseDatabase.getInstance().getReference();
-
-
 
             String key = database.child("WordsAndDefs").push().getKey();
             database.child("WordsAndDefs").child(key).child("word").setValue(word); //need to grab a random integer as the ID

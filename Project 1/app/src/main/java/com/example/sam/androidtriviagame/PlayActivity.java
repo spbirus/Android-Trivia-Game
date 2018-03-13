@@ -1,6 +1,9 @@
 package com.example.sam.androidtriviagame;
 
+import android.content.ContentValues;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.speech.tts.TextToSpeech;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,7 +20,6 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -43,7 +45,7 @@ public class PlayActivity extends AppCompatActivity {
     String[] storedWords = new String[100]; //store the words and definitions in an array to be randomly accessed
     String[] storedDefs = new String[100]; //store the defs to be randomly accessed for incorrect answers
     int totalWords = 0;
-    int correctWord;
+    int correctWordNumber;
     ArrayList alreadySelectedWords;
 
     int finalScore; //amount of correct answers
@@ -59,7 +61,9 @@ public class PlayActivity extends AppCompatActivity {
     private boolean isTTSinitialized;
 
     String playerName;
-    int playerID;
+    String playerID;
+
+    SQLiteDatabase sqliteWordDB;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,7 +72,7 @@ public class PlayActivity extends AppCompatActivity {
 
         switchData = getIntent().getIntExtra("switch",0);
         playerName = getIntent().getStringExtra("name");
-        playerID = getIntent().getIntExtra("id",1);
+        playerID = getIntent().getStringExtra("id");
         Log.v("switchData", ""+switchData);
 
         Intent callingIntent = getIntent();
@@ -91,6 +95,18 @@ public class PlayActivity extends AppCompatActivity {
         button5 = (Button) findViewById(R.id.button5);
         bar = (ProgressBar) findViewById(R.id.progressBar);
 
+        //initialize the database
+        sqliteWordDB = openOrCreateDatabase("WordsAndDefs",MODE_PRIVATE,null);
+
+        //sqliteWordDB.execSQL("Drop Table if exists "+"WordsAndDefs");
+        String query = "CREATE TABLE IF NOT EXISTS WordsAndDefs ( "
+                + " id TEXT PRIMARY KEY, "
+                + " word TEXT NOT NULL, "
+                + " defn TEXT NOT NULL "
+                + ")";
+        sqliteWordDB.execSQL(query);
+
+
         //initialize the array to reset after each time the play activity is called
         alreadySelectedWords= new ArrayList();
 
@@ -101,45 +117,97 @@ public class PlayActivity extends AppCompatActivity {
         finalScore = 0;
 
 
+        //WILL NEED DELETED ONCE DATABASE IS WORKING
         //-----------------------------------------------------------------------------------------
         //use scanner to open text file
-        scanOriginal = new Scanner(getResources().openRawResource(R.raw.wordsdefinitions));
-        //add original to the array
-
-        while(scanOriginal.hasNextLine()){
-            String line = scanOriginal.nextLine();
-            storedWords[totalWords] = line;
-            String[] split = line.split(",");
-            storedDefs[totalWords] = split[1]; //store just the def
-            totalWords++;
-        }
-
-
-        //add the new words to the array
-        try {
-            scanNew = new Scanner(openFileInput("newwordsdefinitions.txt"));
-            //add new to the array
-            while(scanNew.hasNextLine()){
-                storedWords[totalWords] = scanNew.nextLine();
-                totalWords++;
-            }
-        } catch (FileNotFoundException e) {
-            Log.v("Play activity", "new file not found");
-        }
+//        scanOriginal = new Scanner(getResources().openRawResource(R.raw.wordsdefinitions));
+//        //add original to the array
+//
+//        while(scanOriginal.hasNextLine()){
+//            String line = scanOriginal.nextLine();
+//            storedWords[totalWords] = line;
+//            String[] split = line.split(",");
+//            storedDefs[totalWords] = split[1]; //store just the def
+//            totalWords++;
+//        }
+//
+//
+//        //add the new words to the array
+//        try {
+//            scanNew = new Scanner(openFileInput("newwordsdefinitions.txt"));
+//            //add new to the array
+//            while(scanNew.hasNextLine()){
+//                storedWords[totalWords] = scanNew.nextLine();
+//                totalWords++;
+//            }
+//        } catch (FileNotFoundException e) {
+//            Log.v("Play activity", "new file not found");
+//        }
         //-----------------------------------------------------------------------------------------
 
-        getWord();
+        DatabaseReference fb = FirebaseDatabase.getInstance().getReference();
+        DatabaseReference wordsAndDefsFB = fb.child("WordsAndDefs");
+
+        wordsAndDefsFB.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot data) {
+                for(DataSnapshot snapshot :data.getChildren()){
+                    String key = snapshot.getKey();
+                    Log.v("onDataChange in Firebase. Key",key);
+
+                    String w = snapshot.child("word").getValue().toString();
+                    String d = snapshot.child("defn").getValue().toString();
+
+                    Log.v("w", w);
+                    Log.v("d",d);
+
+                    //add values to SQLite database
+                    ContentValues cvalues = new ContentValues();
+                    cvalues.put("id", key);
+                    cvalues.put("word", w);
+                    cvalues.put("defn",d);
+                    sqliteWordDB.insert("WordsAndDefs", null, cvalues);
+                }
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.v("onCancelled in Firebase","");
+            }
+        });
+
+
+
+        //getWord();
+
+        getTotalWords();
+        getWordSQL();
+        setDefSQL();
+    }
+    private void getTotalWords(){
+        Cursor cr = sqliteWordDB.rawQuery("SELECT word FROM WordsAndDefs", null);
+        totalWords = cr.getCount();
+        cr.close();
+        Log.v("Total Word #", Integer.toString(totalWords));
     }
 
-    public void getWord(){
-        correctWord = getRandomWithExclusion(rand, 0, totalWords-2, alreadySelectedWords); //has to be -2 so that array out of bounds exceptions aren't thrown
-        alreadySelectedWords.add(correctWord);
-        wordAndDef = storedWords[correctWord].split(",");
+    private void getWordSQL(){
+        correctWordNumber = getRandomWithExclusion(rand, 1, totalWords-1, alreadySelectedWords); //has to be -2 so that array out of bounds exceptions aren't thrown
+        alreadySelectedWords.add(correctWordNumber);
 
+        Log.v("Correct word #", Integer.toString(correctWordNumber));
 
+        String wordText = null;
+        //set up a cursor to get the word
+        Cursor cr = sqliteWordDB.rawQuery("SELECT word FROM WordsAndDefs", null);
+        if( cr != null ) {
+            cr.move(correctWordNumber);
+            wordText = cr.getString(cr.getColumnIndex("word"));
+        }
+        cr.close();
 
-        //set the text on screen to the word
-        word.setText(wordAndDef[0]);
+        word.setText(wordText);
 
         //tts the word
         if(switchData == 1){
@@ -150,35 +218,63 @@ public class PlayActivity extends AppCompatActivity {
                         TextToSpeech.QUEUE_FLUSH, null); //first time flush is used to skip the previous tts if there is some left
             }
         }
-
-        //set the definitions
-        //both the correct one and the rest
-        setDef();
     }
 
-    public void setDef(){
-        //randomize which one has the correct answer
+//    public void getWord(){
+//        correctWordNumber = getRandomWithExclusion(rand, 0, totalWords-2, alreadySelectedWords); //has to be -2 so that array out of bounds exceptions aren't thrown
+//        alreadySelectedWords.add(correctWordNumber);
+//        wordAndDef = storedWords[correctWordNumber].split(",");
+//
+//
+//
+//        //set the text on screen to the word
+//        word.setText(wordAndDef[0]);
+//
+//        //tts the word
+//        if(switchData == 1){
+//            Log.v("tts initialized", ""+isTTSinitialized);
+//            if (isTTSinitialized) {
+//                Log.v("tts word", "is in here");
+//                tts.speak("The word is " + wordAndDef[0],
+//                        TextToSpeech.QUEUE_FLUSH, null); //first time flush is used to skip the previous tts if there is some left
+//            }
+//        }
+//
+//        //set the definitions
+//        //both the correct one and the rest
+//        setDef();
+//    }
+
+    public void setDefSQL(){
         correctNumber = rand.nextInt(5) + 1;
         correctAnswer = "Button"+correctNumber;
         ArrayList exclude = new ArrayList();
-        exclude.add(correctWord); //exclude the correct answer from being put as a random wrong answer
+        exclude.add(correctWordNumber); //exclude the correct answer from being put as a random wrong answer
 
+        String defnText = null;
+        //set up a cursor to get the def
+        Cursor cr = sqliteWordDB.rawQuery("SELECT defn FROM WordsAndDefs", null);
+        if( cr != null) {
+            cr.move(correctWordNumber);
+            defnText = cr.getString(cr.getColumnIndex("defn"));// cr.getString(correctWordNumber);
+        }
+        cr.close();
         //set the correct answer
         switch (correctNumber){
             case 1:
-                button1.setText(wordAndDef[1]);
+                button1.setText(defnText);
                 break;
             case 2:
-                button2.setText(wordAndDef[1]);
+                button2.setText(defnText);
                 break;
             case 3:
-                button3.setText(wordAndDef[1]);
+                button3.setText(defnText);
                 break;
             case 4:
-                button4.setText(wordAndDef[1]);
+                button4.setText(defnText);
                 break;
             case 5:
-                button5.setText(wordAndDef[1]);
+                button5.setText(defnText);
                 break;
         }
 
@@ -187,60 +283,67 @@ public class PlayActivity extends AppCompatActivity {
             //Log.v("Loop for wrong answers", ""+i);
             //Log.v("size", ""+exclude.size());
             //Log.v("exclude", ""+exclude.toString());
-            int wrongRandom = getRandomWithExclusion(rand, 0, 4, exclude);
+            int wrongRandom = getRandomWithExclusion(rand, 1, 5, exclude);
             //Log.v("wrongRandom", ""+wrongRandom);
             exclude.add(wrongRandom);
             Collections.sort(exclude); //needs to be in sorted order to exclude the correct numbers
 
-
+            String defnWrongText = null;
+            //set up a cursor to get the def
+            Cursor crWrong = sqliteWordDB.rawQuery("SELECT defn FROM WordsAndDefs", null);
+            if(crWrong != null){
+                crWrong.move(wrongRandom);
+                defnWrongText = crWrong.getString(crWrong.getColumnIndex("defn"));
+            }
+            crWrong.close();
 
             if(i != correctNumber) {
                 switch (i) {
                     case 1:
-                        button1.setText(storedDefs[wrongRandom]);
+                        button1.setText(defnWrongText);
                         if (switchData == 1) {
                             Log.v("tts initialized", "" + isTTSinitialized);
                             if (isTTSinitialized) {
-                                tts.speak("Choice 1 " + storedDefs[wrongRandom],
+                                tts.speak("Choice 1 " + defnWrongText,
                                         TextToSpeech.QUEUE_ADD, null);
                             }
                         }
                         break;
                     case 2:
-                        button2.setText(storedDefs[wrongRandom]);
+                        button2.setText(defnWrongText);
                         if (switchData == 1) {
                             Log.v("tts initialized", "" + isTTSinitialized);
                             if (isTTSinitialized) {
-                                tts.speak("Choice 2 " + storedDefs[wrongRandom],
+                                tts.speak("Choice 2 " + defnWrongText,
                                         TextToSpeech.QUEUE_ADD, null);
                             }
                         }
                         break;
                     case 3:
-                        button3.setText(storedDefs[wrongRandom]);
+                        button3.setText(defnWrongText);
                         if (switchData == 1) {
                             Log.v("tts initialized", "" + isTTSinitialized);
                             if (isTTSinitialized) {
-                                tts.speak("Choice 3 " + storedDefs[wrongRandom],
+                                tts.speak("Choice 3 " + defnWrongText,
                                         TextToSpeech.QUEUE_ADD, null);
                             }
                         }
                         break;
                     case 4:
-                        button4.setText(storedDefs[wrongRandom]);
+                        button4.setText(defnWrongText);
                         if (switchData == 1) {
                             if (isTTSinitialized) {
-                                tts.speak("Choice 4 " + storedDefs[wrongRandom],
+                                tts.speak("Choice 4 " + defnWrongText,
                                         TextToSpeech.QUEUE_ADD, null);
                             }
                         }
                         break;
                     case 5:
-                        button5.setText(storedDefs[wrongRandom]);
+                        button5.setText(defnWrongText);
                         if (switchData == 1) {
                             Log.v("tts initialized", "" + isTTSinitialized);
                             if (isTTSinitialized) {
-                                tts.speak("Choice 5 " + storedDefs[wrongRandom],
+                                tts.speak("Choice 5 " + defnWrongText,
                                         TextToSpeech.QUEUE_ADD, null);
                             }
                         }
@@ -252,7 +355,7 @@ public class PlayActivity extends AppCompatActivity {
                 if(switchData == 1){
                     Log.v("tts initialized", ""+isTTSinitialized);
                     if (isTTSinitialized) {
-                        tts.speak("Choice "+correctNumber+ " " + wordAndDef[1],
+                        tts.speak("Choice "+correctNumber+ " " + defnText,
                                 TextToSpeech.QUEUE_ADD, null);
                     }
                 }
@@ -260,6 +363,111 @@ public class PlayActivity extends AppCompatActivity {
         }
 
     }
+
+//    public void setDef(){
+//        //randomize which one has the correct answer
+//        correctNumber = rand.nextInt(5) + 1;
+//        correctAnswer = "Button"+correctNumber;
+//        ArrayList exclude = new ArrayList();
+//        exclude.add(correctWordNumber); //exclude the correct answer from being put as a random wrong answer
+//
+//        //set the correct answer
+//        switch (correctNumber){
+//            case 1:
+//                button1.setText(wordAndDef[1]);
+//                break;
+//            case 2:
+//                button2.setText(wordAndDef[1]);
+//                break;
+//            case 3:
+//                button3.setText(wordAndDef[1]);
+//                break;
+//            case 4:
+//                button4.setText(wordAndDef[1]);
+//                break;
+//            case 5:
+//                button5.setText(wordAndDef[1]);
+//                break;
+//        }
+//
+//        //set the other ones to wrong answers
+//        for(int i =1; i<=5; i++){
+//            //Log.v("Loop for wrong answers", ""+i);
+//            //Log.v("size", ""+exclude.size());
+//            //Log.v("exclude", ""+exclude.toString());
+//            int wrongRandom = getRandomWithExclusion(rand, 0, 4, exclude);
+//            //Log.v("wrongRandom", ""+wrongRandom);
+//            exclude.add(wrongRandom);
+//            Collections.sort(exclude); //needs to be in sorted order to exclude the correct numbers
+//
+//
+//
+//            if(i != correctNumber) {
+//                switch (i) {
+//                    case 1:
+//                        button1.setText(storedDefs[wrongRandom]);
+//                        if (switchData == 1) {
+//                            Log.v("tts initialized", "" + isTTSinitialized);
+//                            if (isTTSinitialized) {
+//                                tts.speak("Choice 1 " + storedDefs[wrongRandom],
+//                                        TextToSpeech.QUEUE_ADD, null);
+//                            }
+//                        }
+//                        break;
+//                    case 2:
+//                        button2.setText(storedDefs[wrongRandom]);
+//                        if (switchData == 1) {
+//                            Log.v("tts initialized", "" + isTTSinitialized);
+//                            if (isTTSinitialized) {
+//                                tts.speak("Choice 2 " + storedDefs[wrongRandom],
+//                                        TextToSpeech.QUEUE_ADD, null);
+//                            }
+//                        }
+//                        break;
+//                    case 3:
+//                        button3.setText(storedDefs[wrongRandom]);
+//                        if (switchData == 1) {
+//                            Log.v("tts initialized", "" + isTTSinitialized);
+//                            if (isTTSinitialized) {
+//                                tts.speak("Choice 3 " + storedDefs[wrongRandom],
+//                                        TextToSpeech.QUEUE_ADD, null);
+//                            }
+//                        }
+//                        break;
+//                    case 4:
+//                        button4.setText(storedDefs[wrongRandom]);
+//                        if (switchData == 1) {
+//                            if (isTTSinitialized) {
+//                                tts.speak("Choice 4 " + storedDefs[wrongRandom],
+//                                        TextToSpeech.QUEUE_ADD, null);
+//                            }
+//                        }
+//                        break;
+//                    case 5:
+//                        button5.setText(storedDefs[wrongRandom]);
+//                        if (switchData == 1) {
+//                            Log.v("tts initialized", "" + isTTSinitialized);
+//                            if (isTTSinitialized) {
+//                                tts.speak("Choice 5 " + storedDefs[wrongRandom],
+//                                        TextToSpeech.QUEUE_ADD, null);
+//                            }
+//                        }
+//                        break;
+//                }
+//
+//            }else{
+//                //need to tts the correct answer too
+//                if(switchData == 1){
+//                    Log.v("tts initialized", ""+isTTSinitialized);
+//                    if (isTTSinitialized) {
+//                        tts.speak("Choice "+correctNumber+ " " + wordAndDef[1],
+//                                TextToSpeech.QUEUE_ADD, null);
+//                    }
+//                }
+//            }
+//        }
+//
+//    }
 
     public void onDefClick(View view){
 
@@ -282,7 +490,9 @@ public class PlayActivity extends AppCompatActivity {
                     break;
             }
             //get new word
-            getWord();
+            getWordSQL();
+            //set the new defn
+            setDefSQL();
             timer++;
 
             if(timer > 5) {
@@ -299,11 +509,9 @@ public class PlayActivity extends AppCompatActivity {
 
 
                 DatabaseReference database = FirebaseDatabase.getInstance().getReference();
-                //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
 
 
-                String id = Integer.toString(playerID);
-                Log.v("Player id", id);
+                String id = playerID; //convert player id to a string to send to database
                 database.child("Players").child(id).child("Name").setValue(playerName);
                 //need to check if there is a new high score
                 String scoreKey = database.child("Players").child(id).child("Scores").push().getKey();

@@ -116,6 +116,7 @@ public class StartActivity extends AppCompatActivity {
 
     public void clickScoreLayout(View view){
         Intent scoreIntent = new Intent(this, ScoreHistoryActivity.class );
+        scoreIntent.putExtra("id", playerID);
         startActivity(scoreIntent);
     }
 

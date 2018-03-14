@@ -73,7 +73,6 @@ public class PlayActivity extends AppCompatActivity {
         switchData = getIntent().getIntExtra("switch",0);
         playerName = getIntent().getStringExtra("name");
         playerID = getIntent().getStringExtra("id");
-        Log.v("switchData", ""+switchData);
 
         Intent callingIntent = getIntent();
 
@@ -106,6 +105,8 @@ public class PlayActivity extends AppCompatActivity {
                 + ")";
         sqliteWordDB.execSQL(query);
 
+        String tableString = getTableAsString(sqliteWordDB, "WordsAndDefs");
+        Log.v("Table as string", tableString);
 
         //initialize the array to reset after each time the play activity is called
         alreadySelectedWords= new ArrayList();
@@ -117,34 +118,6 @@ public class PlayActivity extends AppCompatActivity {
         finalScore = 0;
 
 
-        //WILL NEED DELETED ONCE DATABASE IS WORKING
-        //-----------------------------------------------------------------------------------------
-        //use scanner to open text file
-//        scanOriginal = new Scanner(getResources().openRawResource(R.raw.wordsdefinitions));
-//        //add original to the array
-//
-//        while(scanOriginal.hasNextLine()){
-//            String line = scanOriginal.nextLine();
-//            storedWords[totalWords] = line;
-//            String[] split = line.split(",");
-//            storedDefs[totalWords] = split[1]; //store just the def
-//            totalWords++;
-//        }
-//
-//
-//        //add the new words to the array
-//        try {
-//            scanNew = new Scanner(openFileInput("newwordsdefinitions.txt"));
-//            //add new to the array
-//            while(scanNew.hasNextLine()){
-//                storedWords[totalWords] = scanNew.nextLine();
-//                totalWords++;
-//            }
-//        } catch (FileNotFoundException e) {
-//            Log.v("Play activity", "new file not found");
-//        }
-        //-----------------------------------------------------------------------------------------
-
         DatabaseReference fb = FirebaseDatabase.getInstance().getReference();
         DatabaseReference wordsAndDefsFB = fb.child("WordsAndDefs");
 
@@ -153,7 +126,7 @@ public class PlayActivity extends AppCompatActivity {
             public void onDataChange(DataSnapshot data) {
                 for(DataSnapshot snapshot :data.getChildren()){
                     String key = snapshot.getKey();
-                    Log.v("onDataChange in Firebase. Key",key);
+                    Log.v("onDataChange in playActivity. Key",key);
 
                     String w = snapshot.child("word").getValue().toString();
                     String d = snapshot.child("defn").getValue().toString();
@@ -551,5 +524,34 @@ public class PlayActivity extends AppCompatActivity {
         bar.incrementProgressBy(20);
     }
 
+    /**
+     * Helper function that parses a given table into a string
+     * and returns it for easy printing. The string consists of
+     * the table name and then each row is iterated through with
+     * column_name: value pairs printed out.
+     *
+     * @param db the database to get the table from
+     * @param tableName the the name of the table to parse
+     * @return the table tableName as a string
+     */
+    public String getTableAsString(SQLiteDatabase db, String tableName) {
+        Log.d("tableAsString", "getTableAsString called");
+        String tableString = String.format("Table %s:\n", tableName);
+        Cursor allRows  = db.rawQuery("SELECT * FROM " + tableName, null);
+        if (allRows.moveToFirst() ){
+            String[] columnNames = allRows.getColumnNames();
+            do {
+                for (String name: columnNames) {
+                    tableString += String.format("%s: %s\n", name,
+                            allRows.getString(allRows.getColumnIndex(name)));
+                }
+                tableString += "\n";
+
+            } while (allRows.moveToNext());
+        }
+        allRows.close();
+
+        return tableString;
+    }
 
 }

@@ -93,25 +93,13 @@ public class LoginActivity extends AppCompatActivity
     public void signInClick(View view) {
         Toast.makeText(this, "Sign in was clicked!", Toast.LENGTH_SHORT).show();
 
-        // speak some words
-//        if (isTTSinitialized) {
-//            tts.speak("You need to log in now",
-//                    TextToSpeech.QUEUE_FLUSH, null);
-//        }
 
         // connect to Google server to log in
         Intent intent = Auth.GoogleSignInApi.getSignInIntent(google);
         startActivityForResult(intent, REQ_CODE_GOOGLE_SIGNIN);
     }
 
-    /*
-     * This method is called when the user has finished speaking from a speech-to-text action.
-     * We just display the spoken text on the screen in a text view.
-     */
-//    @Override
-//    public void onSpeechToTextReady(String spokenText) {
-//        $TV(R.id.results).setText("User's favorite color is: " + spokenText);
-//    }
+
 
 
 

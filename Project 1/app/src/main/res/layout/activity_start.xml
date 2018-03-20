@@ -38,22 +38,38 @@
             android:id="@+id/playButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/play_button"
-            android:onClick="clickPlayLayout"/>
+            android:onClick="clickPlayLayout"
+            android:text="@string/play_button" />
 
         <Button
             android:id="@+id/addButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/add_button"
-            android:onClick="clickAddLayout"/>
+            android:onClick="clickAddLayout"
+            android:text="@string/add_button" />
 
         <Button
             android:id="@+id/scoreButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/score_button"
-            android:onClick="clickScoreLayout"/>
+            android:onClick="clickScoreLayout"
+            android:text="@string/score_button" />
+
+        <Button
+            android:id="@+id/button6"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="clickCamera"
+            android:text="Camera"
+            tools:layout_editor_absoluteY="171dp" />
+
+        <ImageView
+            android:id="@+id/camera_image"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:srcCompat="@drawable/common_full_open_on_phone" />
+
     </LinearLayout>
+
 </android.support.constraint.ConstraintLayout>

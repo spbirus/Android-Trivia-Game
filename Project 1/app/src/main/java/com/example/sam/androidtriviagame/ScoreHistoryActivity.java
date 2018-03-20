@@ -1,8 +1,13 @@
 package com.example.sam.androidtriviagame;
 
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -85,7 +90,6 @@ public class ScoreHistoryActivity extends AppCompatActivity {
                     cvalues.put("time",t);
                     sqliteScoreHistoryDB.insert("scoreHistory", null, cvalues);
                 }
-
             }
 
             @Override

@@ -1,10 +1,17 @@
 package com.example.sam.androidtriviagame;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.Build;
 import android.speech.tts.TextToSpeech;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -64,6 +71,7 @@ public class PlayActivity extends AppCompatActivity {
     String playerID;
 
     SQLiteDatabase sqliteWordDB;
+    String CHANNEL_ID = "trivia";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,6 +111,7 @@ public class PlayActivity extends AppCompatActivity {
                 + " word TEXT NOT NULL, "
                 + " defn TEXT NOT NULL "
                 + ")";
+
         sqliteWordDB.execSQL(query);
 
         String tableString = getTableAsString(sqliteWordDB, "WordsAndDefs");
@@ -141,6 +150,27 @@ public class PlayActivity extends AppCompatActivity {
                     cvalues.put("defn",d);
                     sqliteWordDB.insert("WordsAndDefs", null, cvalues);
                 }
+
+                NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, "TriviaApp", NotificationManager.IMPORTANCE_HIGH);
+
+                Notification.Builder builder = new Notification.Builder(PlayActivity.this)
+                        .setContentTitle("Android Trivia Game")
+                        .setContentText("Score sync is complete")
+                        .setAutoCancel(true)
+                        .setSmallIcon(R.drawable.ic_stat_android)
+                        .setVisibility(Notification.VISIBILITY_PUBLIC)
+                        .setPriority(Notification.PRIORITY_HIGH)
+                        .setChannelId(CHANNEL_ID);
+                Notification notification = builder.build();
+
+
+
+                NotificationManager mNotificationManager =
+                        (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                mNotificationManager.createNotificationChannel(mChannel);
+
+                // Issue the notification.
+                mNotificationManager.notify(12345 , notification);
 
             }
 
@@ -192,31 +222,6 @@ public class PlayActivity extends AppCompatActivity {
             }
         }
     }
-
-//    public void getWord(){
-//        correctWordNumber = getRandomWithExclusion(rand, 0, totalWords-2, alreadySelectedWords); //has to be -2 so that array out of bounds exceptions aren't thrown
-//        alreadySelectedWords.add(correctWordNumber);
-//        wordAndDef = storedWords[correctWordNumber].split(",");
-//
-//
-//
-//        //set the text on screen to the word
-//        word.setText(wordAndDef[0]);
-//
-//        //tts the word
-//        if(switchData == 1){
-//            Log.v("tts initialized", ""+isTTSinitialized);
-//            if (isTTSinitialized) {
-//                Log.v("tts word", "is in here");
-//                tts.speak("The word is " + wordAndDef[0],
-//                        TextToSpeech.QUEUE_FLUSH, null); //first time flush is used to skip the previous tts if there is some left
-//            }
-//        }
-//
-//        //set the definitions
-//        //both the correct one and the rest
-//        setDef();
-//    }
 
     public void setDefSQL(){
         correctNumber = rand.nextInt(5) + 1;
@@ -336,111 +341,6 @@ public class PlayActivity extends AppCompatActivity {
         }
 
     }
-
-//    public void setDef(){
-//        //randomize which one has the correct answer
-//        correctNumber = rand.nextInt(5) + 1;
-//        correctAnswer = "Button"+correctNumber;
-//        ArrayList exclude = new ArrayList();
-//        exclude.add(correctWordNumber); //exclude the correct answer from being put as a random wrong answer
-//
-//        //set the correct answer
-//        switch (correctNumber){
-//            case 1:
-//                button1.setText(wordAndDef[1]);
-//                break;
-//            case 2:
-//                button2.setText(wordAndDef[1]);
-//                break;
-//            case 3:
-//                button3.setText(wordAndDef[1]);
-//                break;
-//            case 4:
-//                button4.setText(wordAndDef[1]);
-//                break;
-//            case 5:
-//                button5.setText(wordAndDef[1]);
-//                break;
-//        }
-//
-//        //set the other ones to wrong answers
-//        for(int i =1; i<=5; i++){
-//            //Log.v("Loop for wrong answers", ""+i);
-//            //Log.v("size", ""+exclude.size());
-//            //Log.v("exclude", ""+exclude.toString());
-//            int wrongRandom = getRandomWithExclusion(rand, 0, 4, exclude);
-//            //Log.v("wrongRandom", ""+wrongRandom);
-//            exclude.add(wrongRandom);
-//            Collections.sort(exclude); //needs to be in sorted order to exclude the correct numbers
-//
-//
-//
-//            if(i != correctNumber) {
-//                switch (i) {
-//                    case 1:
-//                        button1.setText(storedDefs[wrongRandom]);
-//                        if (switchData == 1) {
-//                            Log.v("tts initialized", "" + isTTSinitialized);
-//                            if (isTTSinitialized) {
-//                                tts.speak("Choice 1 " + storedDefs[wrongRandom],
-//                                        TextToSpeech.QUEUE_ADD, null);
-//                            }
-//                        }
-//                        break;
-//                    case 2:
-//                        button2.setText(storedDefs[wrongRandom]);
-//                        if (switchData == 1) {
-//                            Log.v("tts initialized", "" + isTTSinitialized);
-//                            if (isTTSinitialized) {
-//                                tts.speak("Choice 2 " + storedDefs[wrongRandom],
-//                                        TextToSpeech.QUEUE_ADD, null);
-//                            }
-//                        }
-//                        break;
-//                    case 3:
-//                        button3.setText(storedDefs[wrongRandom]);
-//                        if (switchData == 1) {
-//                            Log.v("tts initialized", "" + isTTSinitialized);
-//                            if (isTTSinitialized) {
-//                                tts.speak("Choice 3 " + storedDefs[wrongRandom],
-//                                        TextToSpeech.QUEUE_ADD, null);
-//                            }
-//                        }
-//                        break;
-//                    case 4:
-//                        button4.setText(storedDefs[wrongRandom]);
-//                        if (switchData == 1) {
-//                            if (isTTSinitialized) {
-//                                tts.speak("Choice 4 " + storedDefs[wrongRandom],
-//                                        TextToSpeech.QUEUE_ADD, null);
-//                            }
-//                        }
-//                        break;
-//                    case 5:
-//                        button5.setText(storedDefs[wrongRandom]);
-//                        if (switchData == 1) {
-//                            Log.v("tts initialized", "" + isTTSinitialized);
-//                            if (isTTSinitialized) {
-//                                tts.speak("Choice 5 " + storedDefs[wrongRandom],
-//                                        TextToSpeech.QUEUE_ADD, null);
-//                            }
-//                        }
-//                        break;
-//                }
-//
-//            }else{
-//                //need to tts the correct answer too
-//                if(switchData == 1){
-//                    Log.v("tts initialized", ""+isTTSinitialized);
-//                    if (isTTSinitialized) {
-//                        tts.speak("Choice "+correctNumber+ " " + wordAndDef[1],
-//                                TextToSpeech.QUEUE_ADD, null);
-//                    }
-//                }
-//            }
-//        }
-//
-//    }
 
     public void onDefClick(View view){
 

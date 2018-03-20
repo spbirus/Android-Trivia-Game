@@ -4,7 +4,12 @@ import android.app.Activity;
 import android.app.DialogFragment;
 import android.app.FragmentManager;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.media.MediaPlayer;
+import android.provider.MediaStore;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -14,6 +19,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Switch;
 
 import com.google.firebase.database.DatabaseReference;
@@ -27,6 +33,7 @@ public class StartActivity extends AppCompatActivity {
     AddWordFragment fragment;
     String playerName;
     String playerID;
+
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
@@ -50,6 +57,10 @@ public class StartActivity extends AppCompatActivity {
         playerID = getIntent().getStringExtra("id");
         //mPlayer = MediaPlayer.create(this, R.raw.popculture);
         mySwitch = findViewById(R.id.musicSwitch);
+
+        //check for camera permission
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) == PackageManager.PERMISSION_DENIED);
+            ActivityCompat.requestPermissions(this, new String[] {android.Manifest.permission.CAMERA}, 6789);
     }
 
 
@@ -74,6 +85,13 @@ public class StartActivity extends AppCompatActivity {
             database.child("WordsAndDefs").child(key).child("word").setValue(word); //need to grab a random integer as the ID
             database.child("WordsAndDefs").child(key).child("defn").setValue(defn);
             //ADD THE WORD TO THE DATABASE
+        }
+
+        //callback from the camera
+        if (requestCode == 6789 && resultCode == RESULT_OK) {
+            Bitmap bmp = (Bitmap) intentdata.getExtras().get("data");
+            ImageView img = (ImageView) findViewById(R.id.camera_image);
+            img.setImageBitmap(bmp);
         }
     }
 
@@ -118,6 +136,14 @@ public class StartActivity extends AppCompatActivity {
         Intent scoreIntent = new Intent(this, ScoreHistoryActivity.class );
         scoreIntent.putExtra("id", playerID);
         startActivity(scoreIntent);
+    }
+
+    public void clickCamera(View view){
+
+        Intent picIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        startActivityForResult(picIntent, 6789);
+
+
     }
 
 }

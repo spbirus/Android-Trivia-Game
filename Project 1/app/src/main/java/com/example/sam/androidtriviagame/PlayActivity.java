@@ -148,14 +148,14 @@ public class PlayActivity extends AppCompatActivity {
                     cvalues.put("id", key);
                     cvalues.put("word", w);
                     cvalues.put("defn",d);
-                    sqliteWordDB.insert("WordsAndDefs", null, cvalues);
+                    sqliteWordDB.replace("WordsAndDefs", null, cvalues);
                 }
 
                 NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, "TriviaApp", NotificationManager.IMPORTANCE_HIGH);
 
                 Notification.Builder builder = new Notification.Builder(PlayActivity.this)
                         .setContentTitle("Android Trivia Game")
-                        .setContentText("Score sync is complete")
+                        .setContentText("Word sync is complete")
                         .setAutoCancel(true)
                         .setSmallIcon(R.drawable.ic_stat_android)
                         .setVisibility(Notification.VISIBILITY_PUBLIC)

@@ -1,6 +1,7 @@
 package com.example.sam.androidtriviagame;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.ContentValues;
 import android.content.Context;
@@ -33,8 +34,11 @@ public class ScoreHistoryActivity extends AppCompatActivity {
     LinearLayout linear;
 
     SQLiteDatabase sqliteScoreHistoryDB;
+    SQLiteDatabase sqliteHighScoreDB;
 
     String playerID;
+
+    String CHANNEL_ID = "trivia";
 
 
     @Override
@@ -43,11 +47,8 @@ public class ScoreHistoryActivity extends AppCompatActivity {
         setContentView(R.layout.activity_score_history);
 
         playerID = getIntent().getStringExtra("id");
-        //Log.v("playerID in history",playerID);
 
-
-       //ArrayList scoreArray = new ArrayList(100);
-
+        //individual score history sqlite db
         sqliteScoreHistoryDB = openOrCreateDatabase("scoreHistory",MODE_PRIVATE,null);
 
         //sqliteScoreHistoryDB.execSQL("Drop Table if exists "+"scoreHistory");
@@ -59,8 +60,23 @@ public class ScoreHistoryActivity extends AppCompatActivity {
         sqliteScoreHistoryDB.execSQL(query);
 
         //print the database to log helper function
-        String tableString = getTableAsString(sqliteScoreHistoryDB, "scoreHistory");
-        Log.v("Table as string scoreHistory", tableString);
+        //String tableString = getTableAsString(sqliteScoreHistoryDB, "scoreHistory");
+        //Log.v("Table as string scoreHistory", tableString);
+
+        //high score sqlite db
+        sqliteHighScoreDB = openOrCreateDatabase("highScore",MODE_PRIVATE, null);
+
+        String query1 = "CREATE TABLE IF NOT EXISTS highScore ( "
+                + " id TEXT PRIMARY KEY, "
+                + " name TEXT NOT NULL, "
+                + " score TEXT NOT NULL "
+                + ")";
+        sqliteHighScoreDB.execSQL(query1);
+
+        //print the database to log helper function
+        //String tableString = getTableAsString(sqliteHighScoreDB, "highScore");
+        //Log.v("Table as string highScore", tableString);
+
 
         DatabaseReference fb = FirebaseDatabase.getInstance().getReference();
         DatabaseReference scoreHistoryFB = fb.child("Players").child(playerID).child("Scores");
@@ -88,7 +104,7 @@ public class ScoreHistoryActivity extends AppCompatActivity {
                     cvalues.put("id", key);
                     cvalues.put("score", s);
                     cvalues.put("time",t);
-                    sqliteScoreHistoryDB.insert("scoreHistory", null, cvalues);
+                    sqliteScoreHistoryDB.replace("scoreHistory", null, cvalues);
                 }
             }
 
@@ -97,6 +113,60 @@ public class ScoreHistoryActivity extends AppCompatActivity {
                 Log.v("onCancelled in Firebase","");
             }
         });
+
+        DatabaseReference f = FirebaseDatabase.getInstance().getReference();
+        DatabaseReference highScoreDB = f.child("HighScores");
+
+        highScoreDB.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for(DataSnapshot snapshot : dataSnapshot.getChildren()){
+                    String key = snapshot.getKey();
+                    Log.v("ondatachange in high score key",key);
+
+                    String name = snapshot.child("Name").getValue().toString();
+                    String score = snapshot.child("Score").getValue().toString();
+
+                    Log.v("name", name);
+                    Log.v("score", score);
+
+                    //add values to the sqlite database
+                    ContentValues cvalues = new ContentValues();
+                    cvalues.put("id", key);
+                    cvalues.put("name", name);
+                    cvalues.put("score", score);
+                    sqliteHighScoreDB.replace("highScore", null, cvalues);
+
+
+                }
+                NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, "TriviaApp", NotificationManager.IMPORTANCE_HIGH);
+
+                Notification.Builder builder = new Notification.Builder(ScoreHistoryActivity.this)
+                        .setContentTitle("Android Trivia Game")
+                        .setContentText("Score sync is complete")
+                        .setAutoCancel(true)
+                        .setSmallIcon(R.drawable.ic_stat_android)
+                        .setVisibility(Notification.VISIBILITY_PUBLIC)
+                        .setPriority(Notification.PRIORITY_HIGH)
+                        .setChannelId(CHANNEL_ID);
+                Notification notification = builder.build();
+
+
+
+                NotificationManager mNotificationManager =
+                        (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                mNotificationManager.createNotificationChannel(mChannel);
+
+                // Issue the notification.
+                mNotificationManager.notify(12345 , notification);
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.v("onCancelled in Firebase","");
+            }
+        });
+
 
         setupLayout();
 
@@ -110,6 +180,7 @@ public class ScoreHistoryActivity extends AppCompatActivity {
 
         int h = 1; //used as an id to differentiate between each newly added inflated view
 
+        //get the local player scores and show them
         Cursor cr = sqliteScoreHistoryDB.rawQuery("SELECT score, time FROM scoreHistory", null);
         cr.moveToFirst();
         //use a cursor to loop through all the scores
@@ -142,6 +213,55 @@ public class ScoreHistoryActivity extends AppCompatActivity {
             h++;
         }
         cr.close();
+
+        childView1 = inflater.inflate(R.layout.add_score, null);
+        childView1.setId(h);
+
+        linear.addView(childView1);
+
+        View view1 = findViewById(h);
+        TextView timeview = view1.findViewById(R.id.timeText);
+        TextView percentview = view1.findViewById(R.id.percentText);
+
+        timeview.setText("High Score Name");
+        percentview.setText("Score");
+        h++;
+
+
+        //get the high scores and show them on the screen
+        Cursor cr1 = sqliteHighScoreDB.rawQuery("SELECT name, score FROM highScore", null);
+        cr1.moveToFirst();
+        //use a cursor to loop through all the scores
+        while( cr1 != null && cr1.getCount() != 0 ) {
+            Log.v("cursor1 position", Integer.toString(cr1.getPosition()));
+            childView1 = inflater.inflate(R.layout.add_score, null);
+            childView1.setId(h);
+
+            linear.addView(childView1);
+
+            View view = findViewById(h);
+            TextView timeview1 = view.findViewById(R.id.timeText);
+            TextView percentview1 = view.findViewById(R.id.percentText);
+
+            String name = cr1.getString(cr1.getColumnIndex("name"));
+            String score = cr1.getString(cr1.getColumnIndex("score"));
+            Log.v("name",name);
+            Log.v("score",score);
+
+            timeview1.setText(name);
+            percentview1.setText(score);
+
+            cr1.moveToNext();
+            //need this to make sure that it doesn't pull a null from the SQLite database
+            //not sure why they cr != null doesn't do this for me
+            if(cr1.getPosition() >= cr1.getCount()){
+                break;
+            }
+
+            h++;
+        }
+
+        cr1.close();
     }
 
     public void backClick(View view){

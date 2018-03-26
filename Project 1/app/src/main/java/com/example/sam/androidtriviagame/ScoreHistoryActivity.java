@@ -140,6 +140,7 @@ public class ScoreHistoryActivity extends AppCompatActivity {
 
                 }
                 NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, "TriviaApp", NotificationManager.IMPORTANCE_HIGH);
+                mChannel.setImportance(NotificationManager.IMPORTANCE_HIGH);
 
                 Notification.Builder builder = new Notification.Builder(ScoreHistoryActivity.this)
                         .setContentTitle("Android Trivia Game")
@@ -158,7 +159,7 @@ public class ScoreHistoryActivity extends AppCompatActivity {
                 mNotificationManager.createNotificationChannel(mChannel);
 
                 // Issue the notification.
-                mNotificationManager.notify(12345 , notification);
+                mNotificationManager.notify(23456 , notification);
             }
 
             @Override

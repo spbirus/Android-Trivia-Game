@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.speech.tts.TextToSpeech;
 import android.support.v4.app.NotificationCompat;
@@ -21,6 +22,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -78,7 +80,7 @@ public class PlayActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play);
 
-        switchData = getIntent().getIntExtra("switch",0);
+        switchData = getIntent().getIntExtra("switch", 0);
         playerName = getIntent().getStringExtra("name");
         playerID = getIntent().getStringExtra("id");
 
@@ -103,7 +105,7 @@ public class PlayActivity extends AppCompatActivity {
         bar = (ProgressBar) findViewById(R.id.progressBar);
 
         //initialize the database
-        sqliteWordDB = openOrCreateDatabase("WordsAndDefs",MODE_PRIVATE,null);
+        sqliteWordDB = openOrCreateDatabase("WordsAndDefs", MODE_PRIVATE, null);
 
         //sqliteWordDB.execSQL("Drop Table if exists "+"WordsAndDefs");
         String query = "CREATE TABLE IF NOT EXISTS WordsAndDefs ( "
@@ -114,11 +116,10 @@ public class PlayActivity extends AppCompatActivity {
 
         sqliteWordDB.execSQL(query);
 
-        String tableString = getTableAsString(sqliteWordDB, "WordsAndDefs");
-        Log.v("Table as string", tableString);
+
 
         //initialize the array to reset after each time the play activity is called
-        alreadySelectedWords= new ArrayList();
+        alreadySelectedWords = new ArrayList();
 
         //set timer
         timer = 1;
@@ -127,27 +128,33 @@ public class PlayActivity extends AppCompatActivity {
         finalScore = 0;
 
 
+        //new MyTask().doInBackground();
+
+        Log.v("creating the fb reference", "here");
         DatabaseReference fb = FirebaseDatabase.getInstance().getReference();
         DatabaseReference wordsAndDefsFB = fb.child("WordsAndDefs");
+        String l = wordsAndDefsFB.toString();
+        Log.v("asdf", l);
 
         wordsAndDefsFB.addValueEventListener(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot data) {
-                for(DataSnapshot snapshot :data.getChildren()){
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot snapshot :dataSnapshot.getChildren()) {
                     String key = snapshot.getKey();
-                    Log.v("onDataChange in playActivity. Key",key);
+                    Log.v("onDataChange in playActivity key ", key);
 
                     String w = snapshot.child("word").getValue().toString();
                     String d = snapshot.child("defn").getValue().toString();
 
                     Log.v("w", w);
-                    Log.v("d",d);
+                    Log.v("d", d);
 
                     //add values to SQLite database
                     ContentValues cvalues = new ContentValues();
                     cvalues.put("id", key);
                     cvalues.put("word", w);
-                    cvalues.put("defn",d);
+                    cvalues.put("defn", d);
+                    //sqliteWordDB.insert("WordsAndDefs", null, cvalues);
                     sqliteWordDB.replace("WordsAndDefs", null, cvalues);
                 }
 
@@ -164,39 +171,43 @@ public class PlayActivity extends AppCompatActivity {
                 Notification notification = builder.build();
 
 
-
                 NotificationManager mNotificationManager =
                         (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 mNotificationManager.createNotificationChannel(mChannel);
 
                 // Issue the notification.
-                mNotificationManager.notify(12345 , notification);
+                mNotificationManager.notify(12345, notification);
+
+                //debugging print of the sqlite table
+                String tableString = getTableAsString(sqliteWordDB, "WordsAndDefs");
+                Log.v("Table as string", tableString);
+
+                //getWord();
+
+                getTotalWords();
+                getWordSQL();
+                setDefSQL();
 
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Log.v("onCancelled in Firebase","");
+                Log.v("onCancelled in Firebase", "");
             }
         });
 
 
-
-        //getWord();
-
-        getTotalWords();
-        getWordSQL();
-        setDefSQL();
     }
-    private void getTotalWords(){
+
+    private void getTotalWords() {
         Cursor cr = sqliteWordDB.rawQuery("SELECT word FROM WordsAndDefs", null);
         totalWords = cr.getCount();
         cr.close();
         Log.v("Total Word #", Integer.toString(totalWords));
     }
 
-    private void getWordSQL(){
-        correctWordNumber = getRandomWithExclusion(rand, 1, totalWords-1, alreadySelectedWords); //has to be -2 so that array out of bounds exceptions aren't thrown
+    private void getWordSQL() {
+        correctWordNumber = getRandomWithExclusion(rand, 1, totalWords - 1, alreadySelectedWords); //has to be -2 so that array out of bounds exceptions aren't thrown
         alreadySelectedWords.add(correctWordNumber);
 
         Log.v("Correct word #", Integer.toString(correctWordNumber));
@@ -204,7 +215,7 @@ public class PlayActivity extends AppCompatActivity {
         String wordText = null;
         //set up a cursor to get the word
         Cursor cr = sqliteWordDB.rawQuery("SELECT word FROM WordsAndDefs", null);
-        if( cr != null ) {
+        if (cr != null) {
             cr.move(correctWordNumber);
             wordText = cr.getString(cr.getColumnIndex("word"));
         }
@@ -213,8 +224,8 @@ public class PlayActivity extends AppCompatActivity {
         word.setText(wordText);
 
         //tts the word
-        if(switchData == 1){
-            Log.v("tts initialized", ""+isTTSinitialized);
+        if (switchData == 1) {
+            Log.v("tts initialized", "" + isTTSinitialized);
             if (isTTSinitialized) {
                 Log.v("tts word", "is in here");
                 tts.speak("The word is " + wordAndDef[0],
@@ -223,22 +234,22 @@ public class PlayActivity extends AppCompatActivity {
         }
     }
 
-    public void setDefSQL(){
+    public void setDefSQL() {
         correctNumber = rand.nextInt(5) + 1;
-        correctAnswer = "Button"+correctNumber;
+        correctAnswer = "Button" + correctNumber;
         ArrayList exclude = new ArrayList();
         exclude.add(correctWordNumber); //exclude the correct answer from being put as a random wrong answer
 
         String defnText = null;
         //set up a cursor to get the def
         Cursor cr = sqliteWordDB.rawQuery("SELECT defn FROM WordsAndDefs", null);
-        if( cr != null) {
+        if (cr != null) {
             cr.move(correctWordNumber);
             defnText = cr.getString(cr.getColumnIndex("defn"));// cr.getString(correctWordNumber);
         }
         cr.close();
         //set the correct answer
-        switch (correctNumber){
+        switch (correctNumber) {
             case 1:
                 button1.setText(defnText);
                 break;
@@ -257,7 +268,7 @@ public class PlayActivity extends AppCompatActivity {
         }
 
         //set the other ones to wrong answers
-        for(int i =1; i<=5; i++){
+        for (int i = 1; i <= 5; i++) {
             //Log.v("Loop for wrong answers", ""+i);
             //Log.v("size", ""+exclude.size());
             //Log.v("exclude", ""+exclude.toString());
@@ -269,13 +280,13 @@ public class PlayActivity extends AppCompatActivity {
             String defnWrongText = null;
             //set up a cursor to get the def
             Cursor crWrong = sqliteWordDB.rawQuery("SELECT defn FROM WordsAndDefs", null);
-            if(crWrong != null){
+            if (crWrong != null) {
                 crWrong.move(wrongRandom);
                 defnWrongText = crWrong.getString(crWrong.getColumnIndex("defn"));
             }
             crWrong.close();
 
-            if(i != correctNumber) {
+            if (i != correctNumber) {
                 switch (i) {
                     case 1:
                         button1.setText(defnWrongText);
@@ -328,12 +339,12 @@ public class PlayActivity extends AppCompatActivity {
                         break;
                 }
 
-            }else{
+            } else {
                 //need to tts the correct answer too
-                if(switchData == 1){
-                    Log.v("tts initialized", ""+isTTSinitialized);
+                if (switchData == 1) {
+                    Log.v("tts initialized", "" + isTTSinitialized);
                     if (isTTSinitialized) {
-                        tts.speak("Choice "+correctNumber+ " " + defnText,
+                        tts.speak("Choice " + correctNumber + " " + defnText,
                                 TextToSpeech.QUEUE_ADD, null);
                     }
                 }
@@ -342,67 +353,67 @@ public class PlayActivity extends AppCompatActivity {
 
     }
 
-    public void onDefClick(View view){
+    public void onDefClick(View view) {
 
-            //check if the def picked is correct
-            switch (view.getId()) {
-                case R.id.button1:
-                    checkAnswer("Button1");
-                    break;
-                case R.id.button2:
-                    checkAnswer("Button2");
-                    break;
-                case R.id.button3:
-                    checkAnswer("Button3");
-                    break;
-                case R.id.button4:
-                    checkAnswer("Button4");
-                    break;
-                case R.id.button5:
-                    checkAnswer("Button5");
-                    break;
-            }
-            //get new word
-            getWordSQL();
-            //set the new defn
-            setDefSQL();
-            timer++;
+        //check if the def picked is correct
+        switch (view.getId()) {
+            case R.id.button1:
+                checkAnswer("Button1");
+                break;
+            case R.id.button2:
+                checkAnswer("Button2");
+                break;
+            case R.id.button3:
+                checkAnswer("Button3");
+                break;
+            case R.id.button4:
+                checkAnswer("Button4");
+                break;
+            case R.id.button5:
+                checkAnswer("Button5");
+                break;
+        }
+        //get new word
+        getWordSQL();
+        //set the new defn
+        setDefSQL();
+        timer++;
 
-            if(timer > 5) {
-                Toast.makeText(getApplicationContext(), "End of game", Toast.LENGTH_SHORT).show();
+        if (timer > 5) {
+            Toast.makeText(getApplicationContext(), "End of game", Toast.LENGTH_SHORT).show();
 
-                changeToPercent();
+            changeToPercent();
 
-                //create timestamp to send with the final percent
-                Timestamp stamp = new Timestamp(System.currentTimeMillis());
-                
-
-                String line = stamp + ", " + finalPercent;
-                Log.v("addwordactivity", ""+line);
+            //create timestamp to send with the final percent
+            Timestamp stamp = new Timestamp(System.currentTimeMillis());
 
 
-                DatabaseReference database = FirebaseDatabase.getInstance().getReference();
+            String line = stamp + ", " + finalPercent;
+            Log.v("addwordactivity", "" + line);
 
 
-                String id = playerID; //convert player id to a string to send to database
-                database.child("Players").child(id).child("Name").setValue(playerName);
-                //need to check if there is a new high score
-                String scoreKey = database.child("Players").child(id).child("Scores").push().getKey();
-                database.child("Players").child(id).child("Scores").child(scoreKey).child("Score").setValue(finalPercent);
-                database.child("Players").child(id).child("Scores").child(scoreKey).child("TimeStamp").setValue(stamp);
-                //go back to the menu
-                finish();
-            }
+            DatabaseReference database = FirebaseDatabase.getInstance().getReference();
+
+
+            String id = playerID; //convert player id to a string to send to database
+            database.child("Players").child(id).child("Name").setValue(playerName);
+            //need to check if there is a new high score
+            String scoreKey = database.child("Players").child(id).child("Scores").push().getKey();
+            database.child("Players").child(id).child("Scores").child(scoreKey).child("Score").setValue(finalPercent);
+            database.child("Players").child(id).child("Scores").child(scoreKey).child("TimeStamp").setValue(stamp);
+            //go back to the menu
+            finish();
+        }
     }
 
-    public void changeToPercent(){
-        finalPercent = String.valueOf((double) finalScore/5*100);
+    public void changeToPercent() {
+        finalPercent = String.valueOf((double) finalScore / 5 * 100);
     }
 
     //picks a random number and blocks it from being where the correct one is while also not picking the same incorrect twice
     public int getRandomWithExclusion(Random rnd, int start, int end, ArrayList exclude) {
 
-        int random = start + rnd.nextInt(end - start + 1 - exclude.size()+1); //not sure why this has to be size + 1
+        int random = start + rnd.nextInt(end - start + 1 - exclude.size() + 1); //not sure why this has to be size + 1
 
         for (Object ex : exclude) {
             if (random < (int) ex) {
@@ -413,11 +424,11 @@ public class PlayActivity extends AppCompatActivity {
         return random;
     }
 
-    public void checkAnswer(String s){
-        if(correctAnswer.equals(s)){
+    public void checkAnswer(String s) {
+        if (correctAnswer.equals(s)) {
             Toast.makeText(getApplicationContext(), "Correct Answer", Toast.LENGTH_SHORT).show();
             finalScore++;
-        }else{
+        } else {
             Toast.makeText(getApplicationContext(), "Wrong Answer", Toast.LENGTH_SHORT).show();
         }
         //update the progress bar to show how many questions left
@@ -430,18 +441,18 @@ public class PlayActivity extends AppCompatActivity {
      * the table name and then each row is iterated through with
      * column_name: value pairs printed out.
      *
-     * @param db the database to get the table from
+     * @param db        the database to get the table from
      * @param tableName the the name of the table to parse
      * @return the table tableName as a string
      */
     public String getTableAsString(SQLiteDatabase db, String tableName) {
         Log.d("tableAsString", "getTableAsString called");
         String tableString = String.format("Table %s:\n", tableName);
-        Cursor allRows  = db.rawQuery("SELECT * FROM " + tableName, null);
-        if (allRows.moveToFirst() ){
+        Cursor allRows = db.rawQuery("SELECT * FROM " + tableName, null);
+        if (allRows.moveToFirst()) {
             String[] columnNames = allRows.getColumnNames();
             do {
-                for (String name: columnNames) {
+                for (String name : columnNames) {
                     tableString += String.format("%s: %s\n", name,
                             allRows.getString(allRows.getColumnIndex(name)));
                 }
@@ -454,4 +465,80 @@ public class PlayActivity extends AppCompatActivity {
         return tableString;
     }
 
+
+    private class MyTask extends AsyncTask<String, String, String> {
+
+
+        @Override
+        protected String doInBackground(String... params) {
+            Log.v("in MyTask", " here");
+            DatabaseReference fb = FirebaseDatabase.getInstance().getReference();
+            DatabaseReference wordsAndDefsFB = fb.child("WordsAndDefs");
+            //sleep();
+
+            wordsAndDefsFB.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                        String key = snapshot.getKey();
+                        Log.v("onDataChange in playActivity key ", key);
+
+                        String w = snapshot.child("word").getValue().toString(); //might need a child(key) in here
+                        String d = snapshot.child("defn").getValue().toString();
+
+                        Log.v("w", w);
+                        Log.v("d", d);
+
+                        //add values to SQLite database
+                        ContentValues cvalues = new ContentValues();
+                        cvalues.put("id", key);
+                        cvalues.put("word", w);
+                        cvalues.put("defn", d);
+                        sqliteWordDB.insert("WordsAndDefs", null, cvalues);
+                        //sqliteWordDB.replace("WordsAndDefs", null, cvalues);
+                    }
+
+                    NotificationChannel mChannel = new NotificationChannel(CHANNEL_ID, "TriviaApp", NotificationManager.IMPORTANCE_HIGH);
+
+                    Notification.Builder builder = new Notification.Builder(PlayActivity.this)
+                            .setContentTitle("Android Trivia Game")
+                            .setContentText("Word sync is complete")
+                            .setAutoCancel(true)
+                            .setSmallIcon(R.drawable.ic_stat_android)
+                            .setVisibility(Notification.VISIBILITY_PUBLIC)
+                            .setPriority(Notification.PRIORITY_HIGH)
+                            .setChannelId(CHANNEL_ID);
+                    Notification notification = builder.build();
+
+
+                    NotificationManager mNotificationManager =
+                            (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                    mNotificationManager.createNotificationChannel(mChannel);
+
+                    // Issue the notification.
+                    mNotificationManager.notify(12345, notification);
+
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+                    Log.v("onCancelled in Firebase", "");
+                }
+            });
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+        }
+
+        private void sleep(){
+            try{
+                Thread.sleep(100);
+            }catch(InterruptedException e){
+                Log.e("yup ",e.toString());
+            }
+        }
+    }
 }
